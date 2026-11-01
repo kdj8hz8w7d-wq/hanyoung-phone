@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>iOS Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #1a1a1a;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Phone Frame */
+        #phone {
+            width: 375px;
+            height: 812px;
+            background-color: #000;
+            border-radius: 40px;
+            border: 12px solid #333;
+            box-shadow: 0 0 40px rgba(0,0,0,0.5), inset 0 0 10px rgba(0,0,0,0.5);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Notch */
+        #notch {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 150px;
+            height: 30px;
+            background-color: #333;
+            border-bottom-left-radius: 20px;
+            border-bottom-right-radius: 20px;
+            z-index: 100;
+        }
+
+        /* Status Bar */
+        #status-bar {
+            position: absolute;
+            top: 0;
+            width: 100%;
+            height: 44px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 24px;
+            font-size: 14px;
+            font-weight: 600;
+            z-index: 90;
+            pointer-events: none;
+            color: white;
+            transition: color 0.3s;
+        }
+
+        /* Home Indicator */
+        #home-indicator {
+            position: absolute;
+            bottom: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 130px;
+            height: 5px;
+            background-color: white;
+            border-radius: 10px;
+            z-index: 100;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        /* Hide Scrollbar */
+        ::-webkit-scrollbar { display: none; }
+
+        /* Screens */
+        .screen {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Lock Screen */
+        #lock-screen {
+            background: url('https://images.unsplash.com/photo-1616712134411-6b6ae89bc3ba?q=80&w=600&auto=format&fit=crop') center/cover;
+            z-index: 80;
+            transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        /* Home Screen */
+        #home-screen {
+            background: url('https://images.unsplash.com/photo-1616712134411-6b6ae89bc3ba?q=80&w=600&auto=format&fit=crop') center/cover;
+            z-index: 10;
+        }
+
+        /* App Screens */
+        .app-screen {
+            position: absolute;
+            inset: 0;
+            background-color: white;
+            z-index: 50;
+            transform: translateY(100%);
+            transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            display: flex;
+            flex-direction: column;
+        }
+        .app-screen.active {
+            transform: translateY(0);
+        }
+
+        /* Inner App Views (like Kakao Chat Room) */
+        .inner-view {
+            position: absolute;
+            inset: 0;
+            background-color: white;
+            z-index: 60;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+        .inner-view.active {
+            transform: translateX(0);
+        }
+
+        /* App Icon Styles */
+        .app-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 14px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 32px;
+            color: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .app-icon:active {
+            transform: scale(0.9);
+        }
+        .app-label {
+            color: white;
+            font-size: 11px;
+            margin-top: 4px;
+            text-align: center;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
+
+        /* Modals */
+        .modal {
+            display: none;
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 200;
+            justify-content: center;
+            align-items: flex-end;
+        }
+        .modal.active {
+            display: flex;
+        }
+        .modal-content {
+            background: white;
+            width: 100%;
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+            padding: 20px;
+            transform: translateY(100%);
+            transition: transform 0.3s;
+        }
+        .modal.active .modal-content {
+            transform: translateY(0);
+        }
+
+        .bubble-tail-left::after {
+            content: ''; position: absolute; bottom: 0; left: -6px; width: 12px; height: 12px;
+            background: inherit; border-bottom-right-radius: 12px;
+        }
+        .bubble-tail-right::after {
+            content: ''; position: absolute; bottom: 0; right: -6px; width: 12px; height: 12px;
+            background: inherit; border-bottom-left-radius: 12px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="phone">
+        <!-- Hardware / System Overlays -->
+        <div id="notch"></div>
+        <div id="status-bar">
+            <span id="sb-time">12:00</span>
+            <div class="flex gap-1.5 items-center text-lg">
+                <i class="ph-fill ph-cell-signal-full"></i>
+                <i class="ph-fill ph-wifi-high"></i>
+                <i class="ph-fill ph-battery-full"></i>
+            </div>
+        </div>
+        <div id="home-indicator" onclick="goHome()"></div>
+
+        <!-- 1. Lock Screen -->
+        <div id="lock-screen" class="screen flex flex-col items-center pt-24 text-white">
+            <div id="ls-date" class="text-xl font-medium mb-1 drop-shadow-md">11월 1일 일요일</div>
+            <div id="ls-time" class="text-7xl font-bold tracking-tighter drop-shadow-md">12:00</div>
+            <div class="mt-auto mb-12 flex flex-col items-center animate-pulse text-sm font-medium drop-shadow-md opacity-80">
+                <i class="ph ph-caret-up text-xl mb-1"></i>
+                위로 쓸어올려 잠금해제
+            </div>
+        </div>
+
+        <!-- 2. Home Screen -->
+        <div id="home-screen" class="screen pt-12 px-6 pb-24 flex flex-col">
+            <!-- App Grid -->
+            <div class="grid grid-cols-4 gap-x-4 gap-y-6 mt-8">
+                <!-- Settings -->
+                <div class="flex flex-col items-center" onclick="openApp('settings')">
+                    <div class="app-icon bg-gray-400"><i class="ph-fill ph-gear"></i></div>
+                    <span class="app-label">설정</span>
+                </div>
+                <!-- Weather -->
+                <div class="flex flex-col items-center" onclick="openApp('weather')">
+                    <div class="app-icon bg-blue-500"><i class="ph-fill ph-sun"></i></div>
+                    <span class="app-label">날씨</span>
+                </div>
+                <!-- Photos -->
+                <div class="flex flex-col items-center" onclick="openApp('photos')">
+                    <div class="app-icon bg-white"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f6/Apple_Photos_icon.png/240px-Apple_Photos_icon.png" class="w-full h-full rounded-[14px]"></div>
+                    <span class="app-label">사진</span>
+                </div>
+                <!-- Instagram -->
+                <div class="flex flex-col items-center" onclick="openApp('instagram')">
+                    <div class="app-icon bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500"><i class="ph ph-instagram-logo"></i></div>
+                    <span class="app-label">Instagram</span>
+                </div>
+            </div>
+
+            <!-- Dock -->
+            <div class="mt-auto bg-white/30 backdrop-blur-md rounded-[30px] p-4 flex justify-around">
+                <!-- Messages -->
+                <div class="app-icon bg-green-500" onclick="openApp('messages')"><i class="ph-fill ph-chat-teardrop-text"></i></div>
+                <!-- KakaoTalk -->
+                <div class="app-icon bg-[#FEE500] text-black" onclick="openApp('kakaotalk')"><i class="ph-fill ph-chat-circle"></i></div>
+                <!-- Phone (Dummy) -->
+                <div class="app-icon bg-green-500"><i class="ph-fill ph-phone"></i></div>
+                <!-- Safari (Dummy) -->
+                <div class="app-icon bg-white text-blue-500"><i class="ph-fill ph-compass"></i></div>
+            </div>
+        </div>
+
+        <!-- APP: Messages (iMessage) -->
+        <div id="app-messages" class="app-screen pt-12 pb-8 bg-gray-50">
+            <div class="px-4 py-2 border-b border-gray-200 bg-gray-50 flex justify-between items-center z-10">
+                <span class="text-blue-500 text-lg">편집</span>
+                <span class="font-semibold text-lg">메시지</span>
+                <i class="ph ph-note-pencil text-blue-500 text-2xl"></i>
+            </div>
+            <div id="imessage-list" class="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
+                <div class="text-center text-xs text-gray-400 mb-2">iMessage • 오늘 오전 10:00</div>
+                <div class="bg-gray-200 text-black px-4 py-2 rounded-2xl rounded-bl-sm self-start max-w-[70%] relative bubble-tail-left">
+                    주말에 시간 어때?
+                </div>
+            </div>
+            <div class="p-3 bg-gray-50 border-t border-gray-200 flex items-center gap-3">
+                <i class="ph-fill ph-plus text-gray-400 text-2xl"></i>
+                <div class="flex-1 bg-white border border-gray-300 rounded-full flex items-center px-3 py-1.5">
+                    <input type="text" id="msg-input" class="flex-1 bg-transparent outline-none text-sm" placeholder="iMessage" onkeypress="if(event.key==='Enter') sendIMessage()">
+                    <i class="ph-fill ph-arrow-up-circle text-blue-500 text-2xl ml-2 cursor-pointer" onclick="sendIMessage()"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- APP: KakaoTalk -->
+        <div id="app-kakaotalk" class="app-screen bg-white pt-12 pb-8">
+            <!-- Header -->
+            <div class="px-4 py-2 flex justify-between items-center z-10 bg-white">
+                <h1 id="kakao-title" class="text-2xl font-bold">친구</h1>
+                <div class="flex gap-4 text-xl">
+                    <i class="ph ph-magnifying-glass"></i>
+                    <i class="ph ph-user-plus cursor-pointer" id="kakao-add-btn" onclick="addKakaoItem()"></i>
+                </div>
+            </div>
+
+            <!-- Tab Content: Friends -->
+            <div id="kakao-tab-friends" class="flex-1 overflow-y-auto px-4 pb-12 flex flex-col">
+                <div class="flex items-center gap-4 py-3 border-b border-gray-100">
+                    <div class="w-14 h-14 bg-gray-200 rounded-[20px] flex items-center justify-center text-gray-400 text-3xl"><i class="ph-fill ph-user"></i></div>
+                    <div class="font-semibold text-lg">나 (User)</div>
+                </div>
+                <div class="text-xs text-gray-500 mt-4 mb-2">친구 <span id="kakao-friend-count">1</span></div>
+                <div id="kakao-friend-list" class="flex flex-col">
+                    <div class="flex items-center gap-3 py-2">
+                        <div class="w-11 h-11 bg-gray-200 rounded-[16px] flex items-center justify-center text-gray-400 text-2xl"><i class="ph-fill ph-user"></i></div>
+                        <span class="font-medium text-[15px]">제미나이</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Content: Chats -->
+            <div id="kakao-tab-chats" class="flex-1 overflow-y-auto px-4 pb-12 hidden flex-col">
+                <div id="kakao-chat-list" class="flex flex-col">
+                    <!-- Chats will be appended here -->
+                </div>
+            </div>
+
+            <!-- Bottom Nav -->
+            <div class="border-t border-gray-100 bg-[#F9F9FA] absolute bottom-6 w-full flex justify-around py-3 text-2xl text-gray-400 z-10">
+                <i class="ph-fill ph-user text-black cursor-pointer" id="knav-friends" onclick="switchKakaoTab('friends')"></i>
+                <i class="ph-fill ph-chat-circle cursor-pointer" id="knav-chats" onclick="switchKakaoTab('chats')"></i>
+                <i class="ph ph-dots-three"></i>
+            </div>
+
+            <!-- Kakao Inner Room -->
+            <div id="kakao-room" class="inner-view bg-[#B2C7D9] pt-12 pb-8">
+                <div class="bg-[#B2C7D9]/90 backdrop-blur px-4 py-3 flex items-center justify-between z-10 absolute top-12 w-full">
+                    <i class="ph ph-caret-left text-2xl cursor-pointer" onclick="closeKakaoRoom()"></i>
+                    <span id="kakao-room-name" class="font-semibold text-base">상대방</span>
+                    <i class="ph ph-magnifying-glass text-xl"></i>
+                </div>
+                <div id="kakao-msg-list" class="flex-1 overflow-y-auto px-4 pt-16 pb-4 flex flex-col gap-2">
+                    <div class="text-center text-xs text-white bg-black/20 rounded-full px-3 py-1 self-center mb-3">새로운 채팅방</div>
+                </div>
+                <div class="bg-white flex items-center px-3 py-2 gap-3 absolute bottom-6 w-full">
+                    <i class="ph-fill ph-plus-square text-gray-500 text-2xl"></i>
+                    <div class="flex-1 bg-[#F5F5F5] rounded-full flex items-center px-3 py-1.5 border border-gray-200">
+                        <input type="text" id="kakao-input" class="flex-1 bg-transparent outline-none text-sm" placeholder="메시지 입력" onkeypress="if(event.key==='Enter') sendKakao()">
+                        <i class="ph-fill ph-paper-plane-right text-[#3B1E1E] text-xl ml-2 cursor-pointer" onclick="sendKakao()"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- APP: Photos -->
+        <div id="app-photos" class="app-screen bg-white pt-12 pb-8">
+            <div class="px-4 py-2 flex justify-between items-center z-10 bg-white">
+                <h1 class="text-2xl font-bold">사진</h1>
+                <label class="cursor-pointer text-blue-500 text-xl font-medium">
+                    추가
+                    <input type="file" class="hidden" accept="image/*" multiple onchange="addPhoto(event)">
+                </label>
+            </div>
+            <div class="flex-1 overflow-y-auto">
+                <div id="photo-grid" class="grid grid-cols-3 gap-0.5">
+                    <!-- Photos will be appended here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- APP: Instagram -->
+        <div id="app-instagram" class="app-screen bg-white pt-12 pb-8">
+            <!-- Header -->
+            <div class="px-4 py-2 flex justify-between items-center border-b border-gray-200 z-10 bg-white">
+                <div class="text-xl font-bold tracking-tighter" style="font-family: 'Georgia', serif;">Instagram</div>
+                <div class="flex gap-4 text-2xl">
+                    <label class="cursor-pointer"><i class="ph ph-plus-square"></i><input type="file" class="hidden" accept="image/*" multiple onchange="openInstaModal(event)"></label>
+                    <i class="ph ph-heart"></i>
+                    <i class="ph ph-paper-plane-tilt"></i>
+                </div>
+            </div>
+            <!-- Feed -->
+            <div class="flex-1 overflow-y-auto pb-12" id="insta-feed">
+                <!-- Stories -->
+                <div class="flex gap-4 p-3 border-b border-gray-200 overflow-x-auto">
+                    <div class="flex flex-col items-center gap-1">
+                        <div class="w-16 h-16 rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-fuchsia-600 p-[2px]">
+                            <div class="w-full h-full rounded-full border-2 border-white bg-gray-200 flex items-center justify-center text-gray-400 text-2xl"><i class="ph-fill ph-user"></i></div>
+                        </div>
+                        <span class="text-[11px]">내 스토리</span>
+                    </div>
+                </div>
+                <!-- Posts -->
+                <div id="insta-posts">
+                    <!-- Posts will be appended here -->
+                </div>
+            </div>
+            <!-- Bottom Nav -->
+            <div class="border-t border-gray-200 bg-white absolute bottom-6 w-full flex justify-around py-3 text-2xl z-10">
+                <i class="ph-fill ph-house"></i>
+                <i class="ph ph-magnifying-glass"></i>
+                <i class="ph ph-film-strip"></i>
+                <div class="w-6 h-6 rounded-full overflow-hidden border border-gray-300 flex items-center justify-center bg-gray-200 text-gray-400 text-sm"><i class="ph-fill ph-user"></i></div>
+            </div>
+        </div>
+
+        <!-- APP: Weather -->
+        <div id="app-weather" class="app-screen bg-blue-500 text-white pt-14 pb-8">
+            <h1 class="text-2xl font-bold px-4 mb-4">날씨</h1>
+            <div class="flex-1 overflow-y-auto px-4 flex flex-col gap-4 pb-12">
+                <!-- Seoul -->
+                <div class="bg-black/20 rounded-2xl p-4 flex justify-between items-center relative overflow-hidden">
+                    <div class="flex flex-col z-10">
+                        <span class="font-bold text-xl">서울</span>
+                        <span class="text-xs opacity-80">오후 1:57</span>
+                        <span class="mt-4 text-sm">맑음</span>
+                    </div>
+                    <div class="flex flex-col items-end z-10">
+                        <span class="text-4xl font-light">15°</span>
+                        <span class="mt-2 text-xs">최고: 17° 최저: 8°</span>
+                    </div>
+                    <i class="ph-fill ph-sun absolute -top-4 -right-2 text-7xl opacity-20"></i>
+                </div>
+                <!-- Singapore -->
+                <div class="bg-black/20 rounded-2xl p-4 flex justify-between items-center relative overflow-hidden">
+                    <div class="flex flex-col z-10">
+                        <span class="font-bold text-xl">싱가포르</span>
+                        <span class="text-xs opacity-80">오후 12:57</span>
+                        <span class="mt-4 text-sm">비</span>
+                    </div>
+                    <div class="flex flex-col items-end z-10">
+                        <span class="text-4xl font-light">28°</span>
+                        <span class="mt-2 text-xs">최고: 31° 최저: 25°</span>
+                    </div>
+                    <i class="ph-fill ph-cloud-rain absolute -top-4 -right-2 text-7xl opacity-20"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- APP: Settings -->
+        <div id="app-settings" class="app-screen bg-[#F2F2F7] pt-12 pb-8">
+            <h1 class="text-3xl font-bold px-4 py-2">설정</h1>
+            <div class="flex-1 overflow-y-auto px-4 pb-12 flex flex-col gap-6 mt-2">
+                <div class="bg-white rounded-[10px] p-3 flex items-center gap-4">
+                    <div class="w-14 h-14 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 text-3xl"><i class="ph-fill ph-user"></i></div>
+                    <div class="flex flex-col">
+                        <span class="text-lg font-semibold">User</span>
+                        <span class="text-xs text-gray-500">Apple ID, iCloud, 미디어 및 구입</span>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-[10px] overflow-hidden flex flex-col text-[15px]">
+                    <div class="flex items-center gap-3 p-3 border-b border-gray-100">
+                        <div class="bg-orange-500 w-7 h-7 rounded-md flex items-center justify-center text-white"><i class="ph-fill ph-airplane-tilt"></i></div>
+                        <span class="flex-1">에어플레인 모드</span>
+                        <div class="w-10 h-6 bg-gray-200 rounded-full relative"><div class="w-5 h-5 bg-white rounded-full absolute top-0.5 left-0.5 shadow-sm"></div></div>
+                    </div>
+                    <div class="flex items-center gap-3 p-3 border-b border-gray-100">
+                        <div class="bg-blue-500 w-7 h-7 rounded-md flex items-center justify-center text-white"><i class="ph-fill ph-wifi-high"></i></div>
+                        <span class="flex-1">Wi-Fi</span>
+                        <span class="text-gray-500 text-sm">연결됨</span>
+                        <i class="ph ph-caret-right text-gray-400"></i>
+                    </div>
+                    <div class="flex items-center gap-3 p-3">
+                        <div class="bg-blue-500 w-7 h-7 rounded-md flex items-center justify-center text-white"><i class="ph-fill ph-bluetooth"></i></div>
+                        <span class="flex-1">Bluetooth</span>
+                        <span class="text-gray-500 text-sm">켬</span>
+                        <i class="ph ph-caret-right text-gray-400"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Instagram Modal -->
+        <div id="insta-modal" class="modal">
+            <div class="modal-content mb-6 mx-2 rounded-[20px]">
+                <div class="flex justify-between items-center mb-4">
+                    <button class="text-gray-500" onclick="closeInstaModal()">취소</button>
+                    <span class="font-bold">새 게시물</span>
+                    <button class="text-blue-500 font-bold" onclick="submitInsta()">공유</button>
+                </div>
+                <div class="flex gap-3">
+                    <div class="w-20 h-20 bg-gray-100 rounded-md overflow-hidden flex-shrink-0">
+                        <img id="insta-preview" class="w-full h-full object-cover">
+                    </div>
+                    <textarea id="insta-caption" class="flex-1 resize-none outline-none text-sm pt-1" placeholder="문구 입력..." rows="4"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Custom Prompt Modal for Input -->
+        <div id="custom-prompt-modal" class="modal">
+            <div class="modal-content mb-6 mx-2 rounded-[20px] bg-white p-5 flex flex-col gap-4">
+                <span id="custom-prompt-title" class="font-bold text-center">입력해주세요</span>
+                <input type="text" id="custom-prompt-input" class="bg-gray-100 rounded-lg px-3 py-2 outline-none w-full border border-gray-200" placeholder="입력" onkeypress="if(event.key==='Enter') submitCustomPrompt()">
+                <div class="flex gap-2 mt-2">
+                    <button class="flex-1 bg-gray-200 text-black py-2.5 rounded-xl font-semibold" onclick="closeCustomPrompt()">취소</button>
+                    <button class="flex-1 bg-blue-500 text-white py-2.5 rounded-xl font-semibold" onclick="submitCustomPrompt()">확인</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kakao Group Chat Modal -->
+        <div id="kakao-group-modal" class="modal">
+            <div class="modal-content mb-6 mx-2 rounded-[20px] bg-white p-5 flex flex-col gap-4 max-h-[70vh]">
+                <span class="font-bold text-center">대화상대 선택</span>
+                <div id="kakao-group-list" class="flex-1 overflow-y-auto flex flex-col gap-1">
+                    <!-- Friends with checkboxes will be appended here -->
+                </div>
+                <div class="flex gap-2 mt-2">
+                    <button class="flex-1 bg-gray-200 text-black py-2.5 rounded-xl font-semibold" onclick="closeKakaoGroupModal()">취소</button>
+                    <button class="flex-1 bg-[#FEE500] text-black py-2.5 rounded-xl font-semibold" onclick="submitKakaoGroup()">확인</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+<script>
+    // ==========================================
+    // ⭐️ 여기에 캐릭터 설정을 입력하세요 ⭐️
+    // ==========================================
+    // 이 데이터를 수정하고 파일을 깃허브에 올리면, 
+    // 접속하는 모든 사람이 이 설정대로 핸드폰을 보게 됩니다!
+    const CHARACTER_DATA = {
+        // 1. 갤러리 기본 사진들 (인터넷 이미지 주소를 넣으세요)
+        defaultPhotos: [
+            "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=600&auto=format&fit=crop",
+            "https://images.unsplash.com/photo-1524250502761-1ac6f2e30d43?q=80&w=600&auto=format&fit=crop",
+            "https://images.unsplash.com/photo-1582562124811-c09040d0a901?q=80&w=600&auto=format&fit=crop"
+        ],
+        // 2. 카카오톡 기본 친구들
+        kakaoFriends: [
+            { name: "단짝친구" },
+            { name: "라이벌" },
+            { name: "동생" }
+        ],
+        // 3. 카카오톡 대화 내역 미리 설정
+        kakaoChatRooms: [
+            {
+                roomId: "단짝친구",
+                messages: [
+                    { sender: "other", text: "오늘 뭐해?", time: "오후 1:00" },
+                    { sender: "me", text: "그냥 뒹굴거리는 중ㅋㅋ 너는?", time: "오후 1:05" },
+                    { sender: "other", text: "나도 심심해", time: "오후 1:06" }
+                ]
+            },
+            {
+                roomId: "라이벌",
+                messages: [
+                    { sender: "other", text: "과제 다 했어?", time: "오전 10:20" },
+                    { sender: "me", text: "아니 아직 시작도 안 함;", time: "오전 10:45" }
+                ]
+            }
+        ],
+        // 4. 인스타그램 기본 게시물
+        instagramPosts: [
+            { 
+                author: "주인공", 
+                imageUrl: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=600&auto=format&fit=crop", 
+                caption: "오늘 날씨 진짜 좋다!! #일상 #풍경",
+                likes: 124 
+            }
+        ],
+        // 5. 기본 아이메시지(문자) 내역
+        imessages: [
+            { sender: "other", text: "내일 늦지마라", time: "어제" },
+            { sender: "me", text: "알았어ㅋㅋㅋ", time: "어제" }
+        ]
+    };
+    // ==========================================
+
+
+    // Local Data Arrays for Rendering
+    let photos = [];
+    let instaPosts = [];
+    let kakaoFriends = [];
+    let kakaoMessages = [];
+    let imessages = [];
+    
+    let chatTarget = '';
+    let currentTab = 'friends';
+
+    // 앱 초기화 및 데이터 로드 (Local Storage 기반)
+    function initApp() {
+        if (!localStorage.getItem('characterPhoneInitialized')) {
+            // 처음 접속(또는 세팅) 시 CHARACTER_DATA를 불러와서 기기에 저장합니다.
+            const initialPhotos = CHARACTER_DATA.defaultPhotos.map(url => ({ image: url, createdAt: Date.now() }));
+            
+            const initialFriends = CHARACTER_DATA.kakaoFriends.map(f => ({ name: f.name, createdAt: Date.now() }));
+            
+            const initialKakaoMsgs = [];
+            CHARACTER_DATA.kakaoChatRooms.forEach(room => {
+                room.messages.forEach(msg => {
+                    initialKakaoMsgs.push({
+                        roomName: room.roomId,
+                        text: msg.text,
+                        time: msg.time,
+                        isMine: msg.sender === 'me',
+                        createdAt: Date.now()
+                    });
+                });
+            });
+
+            const initialInsta = CHARACTER_DATA.instagramPosts.map(post => ({
+                image: post.imageUrl,
+                caption: post.caption,
+                author: post.author,
+                likes: post.likes || 0,
+                createdAt: Date.now()
+            }));
+
+            const initialIMessages = CHARACTER_DATA.imessages.map(msg => ({
+                text: msg.text,
+                time: msg.time,
+                isMine: msg.sender === 'me',
+                createdAt: Date.now()
+            }));
+
+            localStorage.setItem('photos', JSON.stringify(initialPhotos));
+            localStorage.setItem('kakaoFriends', JSON.stringify(initialFriends));
+            localStorage.setItem('kakaoMessages', JSON.stringify(initialKakaoMsgs));
+            localStorage.setItem('instaPosts', JSON.stringify(initialInsta));
+            localStorage.setItem('imessages', JSON.stringify(initialIMessages));
+            
+            localStorage.setItem('characterPhoneInitialized', 'true');
+        }
+
+        loadData();
+        setupListeners();
+    }
+
+    // 데이터를 메모리로 불러와서 화면에 그립니다.
+    function loadData() {
+        photos = JSON.parse(localStorage.getItem('photos') || '[]');
+        kakaoFriends = JSON.parse(localStorage.getItem('kakaoFriends') || '[]');
+        kakaoMessages = JSON.parse(localStorage.getItem('kakaoMessages') || '[]');
+        instaPosts = JSON.parse(localStorage.getItem('instaPosts') || '[]');
+        imessages = JSON.parse(localStorage.getItem('imessages') || '[]');
+
+        renderPhotos();
+        renderKakaoFriends();
+        renderKakaoChatList();
+        renderInsta();
+        renderIMessages();
+    }
+
+    // 데이터 저장 후 화면 갱신
+    function saveData() {
+        localStorage.setItem('photos', JSON.stringify(photos));
+        localStorage.setItem('kakaoFriends', JSON.stringify(kakaoFriends));
+        localStorage.setItem('kakaoMessages', JSON.stringify(kakaoMessages));
+        localStorage.setItem('instaPosts', JSON.stringify(instaPosts));
+        localStorage.setItem('imessages', JSON.stringify(imessages));
+        loadData();
+    }
+
+    // Image Resize Helper
+    function resizeImage(file, maxWidth, callback) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+                if (width > maxWidth) {
+                    height = Math.round((height * maxWidth) / width);
+                    width = maxWidth;
+                }
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                callback(canvas.toDataURL('image/jpeg', 0.6));
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // 이벤트 리스너 설정
+    function setupListeners() {
+        window.addEventListener('storage', () => { loadData(); });
+    }
+
+    // Render Functions
+    function renderPhotos() {
+        const grid = document.getElementById('photo-grid');
+        const sortedPhotos = [...photos].sort((a, b) => b.createdAt - a.createdAt);
+        grid.innerHTML = sortedPhotos.map(p => `<div class="aspect-square bg-gray-200"><img src="${p.image}" class="w-full h-full object-cover"></div>`).join('');
+    }
+
+    function renderInsta() {
+        const feed = document.getElementById('insta-posts');
+        const sortedPosts = [...instaPosts].sort((a, b) => b.createdAt - a.createdAt);
+        feed.innerHTML = sortedPosts.map(post => `
+            <div class="flex flex-col mb-4">
+                <div class="flex justify-between items-center p-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-gray-200 border border-gray-200 flex items-center justify-center text-gray-400 overflow-hidden"><i class="ph-fill ph-user"></i></div>
+                        <span class="text-sm font-semibold">${post.author || 'User'}</span>
+                    </div>
+                    <i class="ph ph-dots-three"></i>
+                </div>
+                <div class="w-full aspect-square bg-gray-100"><img src="${post.image}" class="w-full h-full object-cover"></div>
+                <div class="p-3 flex justify-between text-2xl">
+                    <div class="flex gap-4"><i class="ph-fill ph-heart text-red-500"></i><i class="ph ph-chat-circle"></i><i class="ph ph-paper-plane-tilt"></i></div>
+                    <i class="ph ph-bookmark-simple"></i>
+                </div>
+                <div class="px-3 text-sm">
+                    <span class="font-semibold">${post.author || 'User'}</span> ${post.caption}
+                </div>
+            </div>`).join('');
+    }
+
+    function renderKakaoFriends() {
+        const list = document.getElementById('kakao-friend-list');
+        list.innerHTML = kakaoFriends.map(f => `
+            <div class="flex items-center gap-3 py-2 cursor-pointer" onclick="openKakaoRoom('${f.name}')">
+                <div class="w-11 h-11 bg-gray-200 rounded-[16px] flex items-center justify-center text-gray-400 text-2xl"><i class="ph-fill ph-user"></i></div>
+                <span class="font-medium text-[15px]">${f.name}</span>
+            </div>`).join('');
+        document.getElementById('kakao-friend-count').innerText = kakaoFriends.length + 1; // 1 for self
+    }
+
+    function renderKakaoChatList() {
+        const list = document.getElementById('kakao-chat-list');
+        const rooms = {};
+        [...kakaoMessages].sort((a,b) => a.createdAt - b.createdAt).forEach(m => {
+            if (!rooms[m.roomName]) rooms[m.roomName] = [];
+            rooms[m.roomName].push(m);
+        });
+
+        list.innerHTML = Object.keys(rooms).map(roomName => {
+            const msgs = rooms[roomName];
+            const lastMsg = msgs[msgs.length - 1];
+            return `
+            <div class="flex items-center gap-3 py-2 cursor-pointer" onclick="openKakaoRoom('${roomName}')">
+                <div class="w-12 h-12 bg-gray-200 rounded-[18px] flex items-center justify-center text-gray-400 text-2xl"><i class="ph-fill ph-user"></i></div>
+                <div class="flex-1 flex flex-col">
+                    <div class="flex justify-between items-center"><span class="font-medium text-[15px]">${roomName}</span><span class="text-[11px] text-gray-400">${lastMsg.time}</span></div>
+                    <span class="text-[13px] text-gray-500 truncate">${lastMsg.text}</span>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    function renderKakaoRoomMessages() {
+        const list = document.getElementById('kakao-msg-list');
+        const msgs = kakaoMessages.filter(m => m.roomName === chatTarget).sort((a,b) => a.createdAt - b.createdAt);
+        
+        list.innerHTML = `<div class="text-center text-xs text-white bg-black/20 rounded-full px-3 py-1 self-center mb-3">채팅방</div>` + msgs.map(m => {
+            if (m.isMine) {
+                return `
+                <div class="flex items-end justify-end gap-1.5 w-full mt-2">
+                    <span class="text-[10px] text-gray-600 mb-0.5">${m.time}</span>
+                    <div class="bg-[#FEE500] text-black px-3 py-2 rounded-lg shadow-sm max-w-[70%] text-sm break-words">${m.text}</div>
+                </div>`;
+            } else {
+                return `
+                <div class="flex items-start justify-start gap-2 w-full mt-2">
+                    <div class="w-8 h-8 rounded-[12px] bg-gray-200 flex-shrink-0 flex items-center justify-center text-gray-400 mt-1"><i class="ph-fill ph-user"></i></div>
+                    <div class="flex flex-col gap-1 max-w-[70%]">
+                        <span class="text-[11px] text-gray-600 ml-1">${m.roomName}</span>
+                        <div class="flex items-end gap-1.5">
+                            <div class="bg-white text-black px-3 py-2 rounded-lg shadow-sm text-sm break-words">${m.text}</div>
+                            <span class="text-[10px] text-gray-600 mb-0.5 whitespace-nowrap">${m.time}</span>
+                        </div>
+                    </div>
+                </div>`;
+            }
+        }).join('');
+        list.scrollTop = list.scrollHeight;
+    }
+
+    function renderIMessages() {
+        const list = document.getElementById('imessage-list');
+        list.innerHTML = `<div class="text-center text-xs text-gray-400 mb-2">iMessage</div>` 
+            + imessages.map(m => {
+                if (m.isMine) {
+                    return `
+                    <div class="bg-blue-500 text-white px-4 py-2 rounded-2xl rounded-br-sm self-end max-w-[70%] relative bubble-tail-right mt-1">
+                        ${m.text}
+                    </div>`;
+                } else {
+                    return `
+                    <div class="bg-gray-200 text-black px-4 py-2 rounded-2xl rounded-bl-sm self-start max-w-[70%] relative bubble-tail-left mt-1">
+                        ${m.text}
+                    </div>`;
+                }
+            }).join('');
+        list.scrollTop = list.scrollHeight;
+    }
+
+
+    // System Clock & UI Logic
+    function updateClock() {
+        const now = new Date();
+        let h = now.getHours();
+        let m = String(now.getMinutes()).padStart(2, '0');
+        document.getElementById('sb-time').textContent = `${h}:${m}`;
+        document.getElementById('ls-time').textContent = `${h}:${m}`;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    const lockScreen = document.getElementById('lock-screen');
+    let startY = 0, currentY = 0, isDragging = false;
+    const handleStart = (e) => {
+        isDragging = true;
+        startY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+        lockScreen.style.transition = 'none';
+    };
+    const handleMove = (e) => {
+        if (!isDragging) return;
+        let y = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+        currentY = y - startY;
+        if (currentY < 0) {
+            lockScreen.style.transform = `translateY(${currentY}px)`;
+        }
+    };
+    const handleEnd = () => {
+        if (!isDragging) return;
+        isDragging = false;
+        lockScreen.style.transition = 'transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1)';
+        if (currentY < -150) {
+            lockScreen.style.transform = `translateY(-100%)`; // Unlocked
+            document.getElementById('status-bar').style.color = 'black'; 
+        } else {
+            lockScreen.style.transform = `translateY(0)`;
+        }
+        currentY = 0;
+    };
+    lockScreen.addEventListener('mousedown', handleStart);
+    document.addEventListener('mousemove', handleMove);
+    document.addEventListener('mouseup', handleEnd);
+    lockScreen.addEventListener('touchstart', handleStart);
+    document.addEventListener('touchmove', handleMove);
+    document.addEventListener('touchend', handleEnd);
+
+    // Bind Functions to Window so HTML inline handlers can access them
+    window.openApp = (id) => {
+        document.querySelectorAll('.app-screen').forEach(app => app.classList.remove('active'));
+        document.getElementById(`app-${id}`).classList.add('active');
+        
+        const sb = document.getElementById('status-bar');
+        if (id === 'weather' || id === 'kakaotalk') {
+            sb.style.color = id === 'weather' ? 'white' : 'black';
+        } else {
+            sb.style.color = 'black';
+        }
+        document.getElementById('home-indicator').style.backgroundColor = (id === 'weather') ? 'white' : '#ccc';
+    };
+
+    window.goHome = () => {
+        document.querySelectorAll('.app-screen').forEach(app => app.classList.remove('active'));
+        document.querySelectorAll('.inner-view').forEach(view => view.classList.remove('active'));
+        document.getElementById('status-bar').style.color = 'black';
+        document.getElementById('home-indicator').style.backgroundColor = 'white';
+    };
+
+    // Global Modal State for Custom Prompts
+    let promptCallback = null;
+    window.showCustomPrompt = (title, callback) => {
+        document.getElementById('custom-prompt-title').innerText = title;
+        document.getElementById('custom-prompt-input').value = '';
+        document.getElementById('custom-prompt-modal').classList.add('active');
+        document.getElementById('custom-prompt-input').focus();
+        promptCallback = callback;
+    };
+    window.closeCustomPrompt = () => {
+        document.getElementById('custom-prompt-modal').classList.remove('active');
+        promptCallback = null;
+    };
+    window.submitCustomPrompt = () => {
+        const val = document.getElementById('custom-prompt-input').value.trim();
+        if (promptCallback) promptCallback(val);
+        window.closeCustomPrompt();
+    };
+
+    // Actions & Saves
+    window.sendIMessage = () => {
+        const input = document.getElementById('msg-input');
+        const text = input.value.trim();
+        if (!text) return;
+        imessages.push({ text, time: "방금", isMine: true, createdAt: Date.now() });
+        saveData();
+        input.value = '';
+    };
+
+    window.switchKakaoTab = (tab) => {
+        currentTab = tab;
+        document.getElementById('kakao-tab-friends').classList.toggle('hidden', tab !== 'friends');
+        document.getElementById('kakao-tab-friends').classList.toggle('flex', tab === 'friends');
+        document.getElementById('kakao-tab-chats').classList.toggle('hidden', tab !== 'chats');
+        document.getElementById('kakao-tab-chats').classList.toggle('flex', tab === 'chats');
+        
+        document.getElementById('knav-friends').classList.toggle('text-black', tab === 'friends');
+        document.getElementById('knav-friends').classList.toggle('text-gray-400', tab !== 'friends');
+        document.getElementById('knav-chats').classList.toggle('text-black', tab === 'chats');
+        document.getElementById('knav-chats').classList.toggle('text-gray-400', tab !== 'chats');
+
+        document.getElementById('kakao-title').innerText = tab === 'friends' ? '친구' : '채팅';
+        document.getElementById('kakao-add-btn').className = tab === 'friends' ? 'ph ph-user-plus cursor-pointer' : 'ph ph-chat-circle-plus cursor-pointer';
+    };
+
+    window.addKakaoItem = () => {
+        if (currentTab === 'friends') {
+            window.showCustomPrompt('추가할 친구 이름:', (name) => {
+                if (!name) return;
+                kakaoFriends.push({ name, createdAt: Date.now() });
+                saveData();
+            });
+        } else {
+            window.openKakaoGroupModal();
+        }
+    };
+
+    let selectedGroupFriends = [];
+
+    window.openKakaoGroupModal = () => {
+        selectedGroupFriends = [];
+        const list = document.getElementById('kakao-group-list');
+        if (kakaoFriends.length === 0) {
+            list.innerHTML = '<div class="text-center text-sm text-gray-500 py-4 mt-2">친구가 없습니다. 먼저 친구를 추가해주세요.</div>';
+        } else {
+            list.innerHTML = kakaoFriends.map(f => `
+                <label class="flex items-center gap-3 py-2.5 cursor-pointer border-b border-gray-100 last:border-0">
+                    <input type="checkbox" value="${f.name}" class="w-5 h-5 accent-[#FEE500]" onchange="toggleGroupFriend(this)">
+                    <div class="w-10 h-10 bg-gray-200 rounded-[14px] flex items-center justify-center text-gray-400"><i class="ph-fill ph-user"></i></div>
+                    <span class="font-medium text-[15px]">${f.name}</span>
+                </label>
+            `).join('');
+        }
+        document.getElementById('kakao-group-modal').classList.add('active');
+    };
+
+    window.toggleGroupFriend = (checkbox) => {
+        if (checkbox.checked) {
+            selectedGroupFriends.push(checkbox.value);
+        } else {
+            selectedGroupFriends = selectedGroupFriends.filter(name => name !== checkbox.value);
+        }
+    };
+
+    window.closeKakaoGroupModal = () => {
+        document.getElementById('kakao-group-modal').classList.remove('active');
+    };
+
+    window.submitKakaoGroup = () => {
+        if (selectedGroupFriends.length === 0) return;
+        const roomName = selectedGroupFriends.join(', ');
+        window.closeKakaoGroupModal();
+        window.openKakaoRoom(roomName);
+    };
+
+    window.openKakaoRoom = (name) => {
+        chatTarget = name;
+        document.getElementById('kakao-room-name').innerText = name;
+        document.getElementById('kakao-room').classList.add('active');
+        document.getElementById('status-bar').style.color = 'black'; 
+        renderKakaoRoomMessages();
+    };
+
+    window.closeKakaoRoom = () => {
+        document.getElementById('kakao-room').classList.remove('active');
+        chatTarget = '';
+    };
+
+    window.sendKakao = () => {
+        const input = document.getElementById('kakao-input');
+        const text = input.value.trim();
+        if (!text || !chatTarget) return;
+        
+        const now = new Date();
+        const time = `${now.getHours()>=12?'오후':'오전'} ${now.getHours()%12||12}:${String(now.getMinutes()).padStart(2,'0')}`;
+        
+        kakaoMessages.push({ roomName: chatTarget, text, time, isMine: true, createdAt: Date.now() });
+        saveData();
+        input.value = '';
+        renderKakaoRoomMessages(); // 화면 즉시 갱신
+    };
+
+    window.addPhoto = (e) => {
+        const files = e.target.files;
+        if (!files || files.length === 0) return;
+        Array.from(files).forEach(file => {
+            resizeImage(file, 600, (base64) => {
+                photos.push({ image: base64, createdAt: Date.now() });
+                saveData();
+            });
+        });
+        e.target.value = '';
+    };
+
+    let tempInstaImgs = [];
+    window.openInstaModal = (e) => {
+        const files = e.target.files;
+        if (!files || files.length === 0) return;
+        tempInstaImgs = [];
+        let processed = 0;
+        Array.from(files).forEach((file, index) => {
+            resizeImage(file, 600, (base64) => {
+                tempInstaImgs.push(base64);
+                if (index === 0) {
+                    document.getElementById('insta-preview').src = base64;
+                }
+                processed++;
+                if (processed === files.length) {
+                    document.getElementById('insta-modal').classList.add('active');
+                }
+            });
+        });
+        e.target.value = '';
+    };
+
+    window.closeInstaModal = () => {
+        document.getElementById('insta-modal').classList.remove('active');
+        document.getElementById('insta-caption').value = '';
+        tempInstaImgs = [];
+    };
+
+    window.submitInsta = () => {
+        if (tempInstaImgs.length === 0) return;
+        const caption = document.getElementById('insta-caption').value.trim();
+        for (const img of tempInstaImgs) {
+            instaPosts.push({ image: img, caption, author: "User", likes: 0, createdAt: Date.now() });
+        }
+        saveData();
+        window.closeInstaModal();
+    };
+
+    // Kickoff
+    initApp();
+</script>
+</body>
+</html>
